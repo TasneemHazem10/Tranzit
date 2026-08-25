@@ -1,23 +1,31 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Tranzit",
+    "slug": "tranzit",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
-    "userInterfaceStyle": "automatic",
+    "scheme": "tranzit",
+    "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tranzit.shipping",
+      "config": {
+        "googleMapsApiKey": "AIzaSyDrzPTEiAG3SzfIOsmfs0YAyFjJLiByqr8"
+      }
     },
     "android": {
+      "package": "com.tranzit.shipping",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#1E1E1C"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDFJVPI73Mn5PiX03CZL8F1475yC0dVeBg"
+        }
+      }
     },
     "web": {
       "output": "static",
@@ -28,15 +36,29 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#1E1E1C",
+          "image": "./assets/images/splash-logo.png",
+          "imageWidth": 180
+        }
+      ],
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "يحتاج ترانزيت الوصول لموقعك لتحديد نقاط الشحن والتتبع."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "يحتاج ترانزيت الوصول لصورك لإرفاق إثبات التسليم.",
+          "cameraPermission": "يحتاج ترانزيت استخدام الكاميرا لتصوير إثبات التسليم."
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     }
   }
 }
