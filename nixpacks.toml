@@ -1,0 +1,15 @@
+# Configure Nixpacks for Laravel + PostgreSQL
+[phases.install]
+cmds = [
+  "composer install --no-dev --no-interaction --prefer-dist"
+]
+
+[phases.build]
+cmds = [
+  "php artisan config:cache",
+  "php artisan route:cache",
+  "php artisan view:cache"
+]
+
+[start]
+cmd = "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"
