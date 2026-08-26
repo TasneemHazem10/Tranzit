@@ -1,4 +1,11 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import {
+  Animated,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import {
   Control,
   Controller,
@@ -7,7 +14,6 @@ import {
   FieldValues,
   RegisterOptions,
 } from 'react-hook-form';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius } from '../theme';
 
@@ -31,28 +37,54 @@ export default function FormField<T extends FieldValues>({
   keyboardType = 'default',
 }: Props<T>) {
   const [hidden, setHidden] = useState(!!secure);
+  const [focused, setFocused] = useState(false);
+  const borderAnim = useRef(new Animated.Value(0)).current;
+
+  const onFocus = () => {
+    setFocused(true);
+    Animated.timing(borderAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
+  };
+  const onBlur = () => {
+    setFocused(false);
+    Animated.timing(borderAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start();
+  };
+
+  const borderColor = borderAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.divider, colors.dark],
+  });
 
   return (
     <Controller
       control={control}
       name={name}
       rules={rules}
-      render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
+      render={({ field: { onChange, onBlur: fieldOnBlur, value }, fieldState: { error } }) => (
         <View>
-          <View
+          <Animated.View
             style={[
               styles.wrap,
-              error && { borderWidth: 1.5, borderColor: colors.red },
+              error && { borderColor: colors.red, borderWidth: 1.5 },
+              !error && { borderColor, borderWidth: focused ? 1.5 : 1 },
             ]}>
             {icon && (
-              <Ionicons name={icon} size={20} color={colors.textGray} style={styles.icon} />
+              <Ionicons
+                name={icon}
+                size={20}
+                color={focused ? colors.dark : colors.textGray}
+                style={styles.icon}
+              />
             )}
             <TextInput
               style={[styles.input, icon && { flex: 1 }]}
               placeholder={placeholder}
               placeholderTextColor={colors.textLight}
               onChangeText={onChange}
-              onBlur={onBlur}
+              onBlur={() => {
+                fieldOnBlur();
+                onBlur();
+              }}
+              onFocus={onFocus}
               value={(value as string | undefined) ?? ''}
               secureTextEntry={hidden}
               keyboardType={keyboardType}
@@ -63,11 +95,11 @@ export default function FormField<T extends FieldValues>({
               <Ionicons
                 name={hidden ? 'eye-outline' : 'eye-off-outline'}
                 size={20}
-                color={colors.textGray}
+                color={focused ? colors.dark : colors.textGray}
                 onPress={() => setHidden(v => !v)}
               />
             )}
-          </View>
+          </Animated.View>
           {!!error && <Text style={styles.error}>{(error as FieldError).message}</Text>}
         </View>
       )}
@@ -81,11 +113,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.card,
     borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.divider,
     paddingHorizontal: 14,
-    height: 54,
-    marginBottom: 6,
+    height: 52,
+    marginBottom: 4,
   },
   icon: { marginLeft: 10 },
   input: {

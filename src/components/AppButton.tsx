@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Pressable,
   StyleSheet,
   Text,
@@ -29,37 +30,47 @@ export default function AppButton({
   textStyle,
 }: Props) {
   const isPrimary = variant === 'primary';
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = () => {
+    Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
+  };
+  const onPressOut = () => {
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
+  };
 
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled || loading}
-      style={({ pressed }) => [
-        styles.base,
-        isPrimary ? styles.primary : variant === 'outline' ? styles.outline : styles.danger,
-        (disabled || loading) && styles.disabled,
-        pressed && styles.pressed,
-        style,
-      ]}>
-      {loading ? (
-        <ActivityIndicator color={isPrimary ? colors.white : colors.dark} />
-      ) : (
-        <Text
-          style={[
-            styles.text,
-            { color: isPrimary ? colors.white : variant === 'danger' ? colors.white : colors.dark },
-            textStyle,
-          ]}>
-          {title}
-        </Text>
-      )}
-    </Pressable>
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
+      <Pressable
+        onPress={onPress}
+        disabled={disabled || loading}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={[
+          styles.base,
+          isPrimary ? styles.primary : variant === 'outline' ? styles.outline : styles.danger,
+          (disabled || loading) && styles.disabled,
+        ]}>
+        {loading ? (
+          <ActivityIndicator color={isPrimary ? colors.white : colors.dark} />
+        ) : (
+          <Text
+            style={[
+              styles.text,
+              { color: isPrimary ? colors.white : variant === 'danger' ? colors.white : colors.dark },
+              textStyle,
+            ]}>
+            {title}
+          </Text>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    height: 56,
+    height: 54,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -69,10 +80,10 @@ const styles = StyleSheet.create({
   primary: {
     backgroundColor: colors.dark,
     shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    elevation: 6,
   },
   outline: {
     backgroundColor: colors.white,
@@ -83,11 +94,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.red,
   },
   disabled: {
-    opacity: 0.55,
-  },
-  pressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
+    opacity: 0.5,
   },
   text: {
     fontFamily: fonts.bold,

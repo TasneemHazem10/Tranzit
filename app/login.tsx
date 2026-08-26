@@ -25,9 +25,14 @@ export default function Login() {
     setLoading(true);
     try {
       const res = await authApi.login(phone.trim(), password);
+      const debugMsg = res.debug_code ? `\n\nكود التحقق: ${res.debug_code}` : '';
+      Alert.alert('تم', `تم إرسال كود التحقق إلى رقمك.${debugMsg}`);
       router.push({ pathname: '/otp', params: { phone: phone.trim(), purpose: 'login' } });
     } catch (e: any) {
-      Alert.alert('تنبيه', e?.message ?? 'حدث خطأ، حاول مرة أخرى.');
+      const fields = e?.fieldErrors
+        ? Object.values(e.fieldErrors).flat().join('\n')
+        : null;
+      Alert.alert('تنبيه', fields ?? e?.message ?? 'حدث خطأ، حاول مرة أخرى.');
     } finally {
       setLoading(false);
     }

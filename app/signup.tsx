@@ -35,7 +35,9 @@ export default function Signup() {
     }
     setLoading(true);
     try {
-      await authApi.register(name.trim(), phone.trim(), password, confirm);
+      const res = await authApi.register(name.trim(), phone.trim(), password, confirm);
+      const debugMsg = res.debug_code ? `\n\nكود التحقق: ${res.debug_code}` : '';
+      Alert.alert('تم', `تم إنشاء الحساب، أدخل كود التحقق المرسل إليك.${debugMsg}`);
       router.push({
         pathname: '/otp',
         params: { phone: phone.trim(), purpose: 'register' },
