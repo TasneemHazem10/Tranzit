@@ -20,7 +20,7 @@ class AuthController extends Controller
     public function register(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255', 'min:3'],
             'phone' => ['required', 'string', 'regex:/^[0-9+\s-]{8,15}$/', 'unique:users,phone'],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
         ]);
@@ -33,7 +33,7 @@ class AuthController extends Controller
             'message' => __('تم إنشاء الحساب، أدخل كود التحقق المرسل إليك.'),
             'needs_otp' => true,
             'phone' => $user->phone,
-            'debug_code' => $this->otp->debugCode($otp),
+            'debug_code' => config('app.otp_debug') ? $otp->code : null,
         ], 201);
     }
 
@@ -59,7 +59,7 @@ class AuthController extends Controller
             'message' => __('تم إرسال كود التحقق إلى رقمك.'),
             'needs_otp' => true,
             'phone' => $user->phone,
-            'debug_code' => $this->otp->debugCode($otp),
+            'debug_code' => config('app.otp_debug') ? $otp->code : null,
         ]);
     }
 
@@ -99,7 +99,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => __('تم إعادة إرسال الكود.'),
-            'debug_code' => $this->otp->debugCode($otp),
+            'debug_code' => config('app.otp_debug') ? $otp->code : null,
         ]);
     }
 
@@ -124,7 +124,7 @@ class AuthController extends Controller
             'message' => __('تم إرسال كود التحقق.'),
             'needs_otp' => true,
             'phone' => $user->phone,
-            'debug_code' => $this->otp->debugCode($otp),
+            'debug_code' => config('app.otp_debug') ? $otp->code : null,
         ]);
     }
 
@@ -209,6 +209,50 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => __('تم تسجيل الخروج.')]);
+    }
+
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'min:3', 'max:255'],
+            'email' => ['sometimes', 'nullable', 'string', 'email', 'max:255', 'unique:users,email,' . $request->user()->id],
+        ]);
+
+        $request->user()->update($data);
+
+        return response()->json([
+            'message' => __('تم تحديث الملف الشخصي.'),
+            'user' => $request->user()->fresh(),
+        ]);
+    }
+
+    public function changePassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
+        ]);
+
+        if (! password_verify($data['current_password'], $request->user()->password)) {
+            return response()->json([
+                'message' => __('كلمة المرور الحالية غير صحيحة.'),
+            ], 422);
+        }
+
+        $request->user()->forceFill(['password' => $data['password']])->save();
+
+        return response()->json(['message' => __('تم تغيير كلمة المرور بنجاح.')]);
+    }
+
+    public function updatePushToken(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'push_token' => ['required', 'string'],
+        ]);
+
+        $request->user()->update(['push_token' => $data['push_token']]);
+
+        return response()->json(['message' => 'Push token updated.']);
     }
 
     private function tokenResponse(User $user, string $message): JsonResponse

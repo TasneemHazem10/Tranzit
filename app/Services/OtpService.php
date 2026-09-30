@@ -10,6 +10,10 @@ class OtpService
     public const LIFETIME_MINUTES = 10;
     public const RESEND_SECONDS = 45;
 
+    public function __construct(private SmsService $sms)
+    {
+    }
+
     public function send(string $phone, string $purpose): OtpCode
     {
         OtpCode::where('phone', $phone)
@@ -26,7 +30,22 @@ class OtpService
             'expires_at' => now()->addMinutes(self::LIFETIME_MINUTES),
         ]);
 
-        Log::info("Tranzit OTP for {$phone} ({$purpose}): {$code}");
+        $purposeLabel = match ($purpose) {
+            'register' => 'account verification',
+            'login' => 'login verification',
+            'reset' => 'password reset',
+            default => 'verification',
+        };
+
+        $message = "Your Tranzet {$purposeLabel} code is: {$code}";
+
+        $this->sms->send($phone, $message);
+
+        Log::info("OTP sent via SMS to {$phone} ({$purpose})");
+
+        if ((bool) config('app.otp_debug')) {
+            Log::info("[DEBUG] OTP code for {$phone} ({$purpose}): {$code}");
+        }
 
         return $otp;
     }
@@ -46,14 +65,5 @@ class OtpService
         $otp->update(['consumed_at' => now()]);
 
         return true;
-    }
-
-    public function debugCode(OtpCode $otp): ?string
-    {
-        if (config('app.otp_debug')) {
-            return $otp->code;
-        }
-
-        return null;
     }
 }

@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
             ['phone' => '0114337313'],
             [
                 'name' => 'محمد شمس',
-                'email' => 'mohamed@tranzit.app',
+                'email' => 'mohamed@tranzet.app',
                 'password' => '123456',
                 'phone_verified_at' => now(),
             ]

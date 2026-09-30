@@ -71,6 +71,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Chat Stream Settings
+    |--------------------------------------------------------------------------
+    |
+    | How many 1-second poll iterations each Server-Sent Events connection
+    | for the real-time chat runs before closing (the client reconnects and
+    | resumes from the last message id).
+    |
+    */
+
+    'chat_stream_iterations' => env('CHAT_STREAM_ITERATIONS', 50),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

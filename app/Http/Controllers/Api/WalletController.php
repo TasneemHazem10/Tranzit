@@ -14,14 +14,22 @@ class WalletController extends Controller
     {
         $wallet = Wallet::firstOrCreate(['user_id' => $request->user()->id]);
 
-        $transactions = WalletTransaction::where('wallet_id', $wallet->id)
+        $perPage = min(50, max(5, (int) $request->query('per_page', 30)));
+        $page = max(1, (int) $request->query('page', 1));
+
+        $query = WalletTransaction::where('wallet_id', $wallet->id)
+            ->where('description', '!=', 'paymob_shipment_pending')
             ->orderByDesc('created_at')
-            ->limit(50)
-            ->get();
+            ->orderByDesc('id');
+
+        $total = (clone $query)->count();
+        $transactions = (clone $query)->forPage($page, $perPage)->get();
 
         return response()->json([
             'balance' => $wallet->balance,
             'transactions' => $transactions,
+            'page' => $page,
+            'has_more' => ($page * $perPage) < $total,
         ]);
     }
 
