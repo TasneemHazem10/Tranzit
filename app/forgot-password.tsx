@@ -6,27 +6,36 @@ import { useForm } from 'react-hook-form';
 import Logo from '../src/components/Logo';
 import AppButton from '../src/components/AppButton';
 import FormField from '../src/components/FormField';
-import GradientBackdrop, { GradientColors } from '../src/components/GradientBackdrop';
+import AuthBackdrop from '../src/components/AuthBackdrop';
+import { Entrance } from '../src/components/Motion';
 import { authApi } from '../src/api/endpoints';
-import { colors, fonts } from '../src/theme';
+import { useLanguage } from '../src/store/language';
+import { fonts, useTheme, type ThemeColors } from '../src/theme';
 
 type FormValues = { phone: string };
 
 export default function ForgotPassword() {
   const router = useRouter();
+  const colors = useTheme();
+  const styles = makeStyles(colors);
+  const { t, isRTL } = useLanguage();
   const [loading, setLoading] = React.useState(false);
   const { control, handleSubmit } = useForm<FormValues>({ defaultValues: { phone: '' } });
 
   const onSubmit = handleSubmit(async ({ phone }) => {
     setLoading(true);
     try {
-      await authApi.forgotPassword(phone.trim());
+      const res = await authApi.forgotPassword(phone.trim());
       router.push({
         pathname: '/otp',
-        params: { phone: phone.trim(), purpose: 'reset' },
+        params: {
+          phone: phone.trim(),
+          purpose: 'reset',
+          ...(res.debug_code ? { code: res.debug_code } : {}),
+        },
       });
     } catch (e: any) {
-      Alert.alert('تنبيه', e?.message ?? 'حدث خطأ، حاول مرة أخرى.');
+      Alert.alert(t.alertWarning, e?.message ?? t.alertForgotError);
     } finally {
       setLoading(false);
     }
@@ -34,38 +43,47 @@ export default function ForgotPassword() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <GradientBackdrop from={GradientColors.peach} />
-      <View style={styles.logoRow}>
-        <Logo width={110} variant="dark" />
-      </View>
+      <AuthBackdrop />
+      <Entrance delay={40} distance={12}>
+        <View style={styles.logoRow}>
+          <Logo width={110} variant="dark" />
+        </View>
+      </Entrance>
 
-      <Text style={styles.title}>نسيت كلمة المرور</Text>
-      <Text style={styles.subtitle}>
-        ما تقلقش، هستعدك ترجع حسابك في خطوات بسيطة.
-      </Text>
+      <Entrance delay={110}>
+        <Text style={[styles.title, { textAlign: isRTL ? 'right' : 'left' }]}>{t.forgotTitle}</Text>
+      </Entrance>
+      <Entrance delay={160}>
+        <Text style={[styles.subtitle, { textAlign: isRTL ? 'right' : 'left' }]}>
+          {t.forgotSubtitle}
+        </Text>
+      </Entrance>
 
-      <View style={styles.form}>
-        <FormField
-          control={control}
-          name="phone"
-          placeholder="رقم الموبايل"
-          icon="call-outline"
-          keyboardType="phone-pad"
-          rules={{
-            required: 'أدخل رقم الموبايل',
-            pattern: { value: /^[0-9+\s-]{8,15}$/, message: 'رقم غير صالح' },
-          }}
-        />
-        <AppButton title="التالي" onPress={onSubmit} loading={loading} style={{ marginTop: 10 }} />
-      </View>
+      <Entrance delay={220}>
+        <View style={styles.form}>
+          <FormField
+            control={control}
+            name="phone"
+            placeholder={t.phoneMobilePlaceholder}
+            icon="call-outline"
+            keyboardType="phone-pad"
+            rules={{
+              required: t.alertPhoneRequiredSignup,
+              pattern: { value: /^[0-9+\s-]{8,15}$/, message: t.alertPhoneInvalidSignup },
+            }}
+          />
+          <AppButton title={t.forgotBtn} onPress={onSubmit} loading={loading} style={{ marginTop: 10 }} />
+        </View>
+      </Entrance>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     paddingHorizontal: 28,
   },
   logoRow: {

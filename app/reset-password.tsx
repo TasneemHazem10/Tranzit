@@ -6,18 +6,23 @@ import { useForm } from 'react-hook-form';
 import Logo from '../src/components/Logo';
 import AppButton from '../src/components/AppButton';
 import FormField from '../src/components/FormField';
-import GradientBackdrop, { GradientColors } from '../src/components/GradientBackdrop';
+import AuthBackdrop from '../src/components/AuthBackdrop';
+import { Entrance } from '../src/components/Motion';
 import { authApi } from '../src/api/endpoints';
-import { colors, fonts } from '../src/theme';
+import { useLanguage } from '../src/store/language';
+import { fonts, useTheme, type ThemeColors } from '../src/theme';
 
 type FormValues = { password: string; confirm: string };
 
 export default function ResetPassword() {
   const router = useRouter();
+  const colors = useTheme();
+  const styles = makeStyles(colors);
   const params = useLocalSearchParams<{ phone?: string; code?: string }>();
   const phone = (params.phone ?? '').toString();
   const code = (params.code ?? '').toString();
 
+  const { t, isRTL } = useLanguage();
   const [loading, setLoading] = React.useState(false);
   const { control, handleSubmit } = useForm<FormValues>({
     defaultValues: { password: '', confirm: '' },
@@ -27,12 +32,12 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       await authApi.resetPassword(phone, code, password, confirm);
-      Alert.alert('تم', 'تم تغيير كلمة المرور، سجل دخولك الآن.', [
-        { text: 'حسناً', onPress: () => router.dismissAll() },
+      Alert.alert(t.alertSuccess, t.alertPasswordChanged, [
+        { text: t.alertOk, onPress: () => router.dismissAll() },
       ]);
       router.replace('/login');
     } catch (e: any) {
-      Alert.alert('تنبيه', e?.message ?? 'حدث خطأ، حاول مرة أخرى.');
+      Alert.alert(t.alertWarning, e?.message ?? t.alertResetError);
     } finally {
       setLoading(false);
     }
@@ -40,48 +45,57 @@ export default function ResetPassword() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <GradientBackdrop from={GradientColors.blue} />
-      <View style={styles.logoRow}>
-        <Logo width={110} variant="dark" />
-      </View>
+      <AuthBackdrop />
+      <Entrance delay={40} distance={12}>
+        <View style={styles.logoRow}>
+          <Logo width={110} variant="dark" />
+        </View>
+      </Entrance>
 
-      <Text style={styles.title}>أنشئ حسابك في ترانزيت</Text>
-      <Text style={styles.subtitle}>اختر كلمة مرور جديدة لحسابك</Text>
+      <Entrance delay={110}>
+        <Text style={[styles.title, { textAlign: isRTL ? 'right' : 'left' }]}>{t.resetTitle}</Text>
+      </Entrance>
+      <Entrance delay={160}>
+        <Text style={[styles.subtitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t.resetSubtitle}</Text>
+      </Entrance>
 
-      <View style={styles.form}>
-        <FormField
-          control={control}
-          name="password"
-          placeholder="كلمة المرور"
-          icon="lock-closed-outline"
-          secure
-          rules={{
-            required: 'أدخل كلمة المرور',
-            minLength: { value: 6, message: '6 أحرف على الأقل' },
-          }}
-        />
-        <FormField
-          control={control}
-          name="confirm"
-          placeholder="تأكيد كلمة المرور"
-          icon="lock-closed-outline"
-          secure
-          rules={{
-            required: 'أعد كتابة كلمة المرور',
-            validate: (v: string, f: FormValues) =>
-              v === f.password || 'كلمتا المرور غير متطابقتين',
-          }}
-        />
-        <AppButton title="التالي" onPress={onSubmit} loading={loading} style={{ marginTop: 10 }} />
-      </View>
+      <Entrance delay={220}>
+        <View style={styles.form}>
+          <FormField
+            control={control}
+            name="password"
+            placeholder={t.passwordPlaceholder}
+            icon="lock-closed-outline"
+            secure
+            rules={{
+              required: t.alertPasswordRequired,
+              minLength: { value: 6, message: t.alertPasswordMin },
+            }}
+          />
+          <FormField
+            control={control}
+            name="confirm"
+            placeholder={t.confirmPasswordPlaceholder}
+            icon="lock-closed-outline"
+            secure
+            rules={{
+              required: t.alertConfirmRequired,
+              validate: (v: string, f: FormValues) =>
+                v === f.password || t.alertPasswordMismatch,
+            }}
+          />
+          <AppButton title={t.resetBtn} onPress={onSubmit} loading={loading} style={{ marginTop: 10 }} />
+        </View>
+      </Entrance>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     paddingHorizontal: 28,
   },
   logoRow: {

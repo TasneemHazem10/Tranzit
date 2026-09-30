@@ -1,41 +1,46 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Logo from '../src/components/Logo';
 import AppButton from '../src/components/AppButton';
 import OtpBoxes from '../src/components/OtpBoxes';
-import GradientBackdrop, { GradientColors } from '../src/components/GradientBackdrop';
+import AuthBackdrop from '../src/components/AuthBackdrop';
+import { Entrance } from '../src/components/Motion';
 import { authApi } from '../src/api/endpoints';
 import { useAuth } from '../src/store/auth';
-import { colors, fonts } from '../src/theme';
+import { useLanguage } from '../src/store/language';
+import { fonts, useTheme, type ThemeColors } from '../src/theme';
 
 const RESEND_SECONDS = 45;
 
 export default function Otp() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ phone?: string; purpose?: string }>();
+  const colors = useTheme();
+  const styles = makeStyles(colors);
+  const params = useLocalSearchParams<{ phone?: string; purpose?: string; code?: string }>();
   const phone = (params.phone ?? '').toString();
   const purpose = (params.purpose ?? 'login').toString();
+  const debugCode = (params.code ?? '').toString();
 
   const { signIn } = useAuth();
-  const [code, setCode] = useState('');
+  const { t, isRTL } = useLanguage();
+  const [code, setCode] = useState(debugCode);
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
 
   useEffect(() => {
     if (seconds <= 0) return;
-    const t = setTimeout(() => setSeconds(s => s - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setSeconds(s => s - 1), 1000);
+    return () => clearTimeout(timer);
   }, [seconds]);
 
   const maskedPhone = phone.length >= 4 ? `${phone.slice(0, -3)}***` : phone;
 
-  const verify = useCallback(async () => {
+  const verify = async () => {
     if (code.replace(/\s/g, '').length !== 4) {
-      Alert.alert('تنبيه', 'أدخل الكود المكوّن من 4 أرقام.');
+      Alert.alert(t.alertWarning, t.alertCodeEmpty);
       return;
     }
     setLoading(true);
@@ -53,20 +58,23 @@ export default function Otp() {
       router.dismissAll();
       router.replace('/(main)');
     } catch (e: any) {
-      Alert.alert('تنبيه', e?.message ?? 'حدث خطأ، حاول مرة أخرى.');
+      Alert.alert(t.alertWarning, e?.message ?? t.alertOtpVerifyError);
     } finally {
       setLoading(false);
     }
-  }, [code, phone, purpose, router, signIn]);
+  };
 
   const resend = async () => {
     setResending(true);
     try {
-      await authApi.resendOtp(phone, purpose);
-      setSeconds(RESEND_SECONDS);
-      Alert.alert('تم', 'تم إعادة إرسال الكود.');
+      const res = await authApi.resendOtp(phone, purpose);
+      if (res.debug_code) {
+        setSeconds(RESEND_SECONDS);
+        setCode(res.debug_code);
+      }
+      Alert.alert(t.alertSuccess, t.alertOtpResent);
     } catch (e: any) {
-      Alert.alert('تنبيه', e?.message ?? 'تعذر إعادة الإرسال.');
+      Alert.alert(t.alertWarning, e?.message ?? t.alertResendFailed);
     } finally {
       setResending(false);
     }
@@ -74,40 +82,63 @@ export default function Otp() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <GradientBackdrop from={GradientColors.softGray} />
-      <View style={styles.logoRow}>
-        <Logo width={110} variant="dark" />
-      </View>
+      <AuthBackdrop />
+      <Entrance delay={40} distance={12}>
+        <View style={styles.logoRow}>
+          <Logo width={110} variant="dark" />
+        </View>
+      </Entrance>
 
-      <Text style={styles.title}>أدخل كود التحقق</Text>
-      <Text style={styles.subtitle}>
-        تم إرسال كود مكوّن من 4 أرقام إلى رقم{' '}
-        <Text style={styles.phone}>{maskedPhone}</Text>
-      </Text>
-
-      <OtpBoxes value={code} onChange={setCode} />
-
-      {seconds > 0 ? (
-        <Text style={styles.countdown}>
-          إعادة الإرسال بعد 00:{seconds.toString().padStart(2, '0')}
+      <Entrance delay={110}>
+        <Text style={[styles.title, { textAlign: isRTL ? 'right' : 'left' }]}>{t.otpTitle}</Text>
+      </Entrance>
+      <Entrance delay={160}>
+        <Text style={[styles.subtitle, { textAlign: isRTL ? 'right' : 'left' }]}>
+          {t.otpSubtitle1}{' '}
+          <Text style={styles.phone}>{maskedPhone}</Text>
         </Text>
-      ) : (
-        <Text onPress={resend} style={styles.resend}>
-          {resending ? 'جارٍ الإرسال...' : 'إعادة إرسال الكود'}
-        </Text>
-      )}
+      </Entrance>
+
+      {debugCode ? (
+        <Entrance delay={200} distance={0}>
+          <View style={styles.devBanner}>
+            <Text style={styles.devBannerText}>
+              {t.devCodeLabel} {debugCode}
+            </Text>
+          </View>
+        </Entrance>
+      ) : null}
+
+      <Entrance delay={260}>
+        <OtpBoxes value={code} onChange={setCode} />
+      </Entrance>
+
+      <Entrance delay={320} distance={0}>
+        {seconds > 0 ? (
+          <Text style={styles.countdown}>
+            {t.resendAfter}{seconds.toString().padStart(2, '0')}
+          </Text>
+        ) : (
+          <Text onPress={resend} style={styles.resend}>
+            {resending ? t.sending : t.resendCode}
+          </Text>
+        )}
+      </Entrance>
 
       <View style={{ flex: 1 }} />
 
-      <AppButton title="تأكيد الكود" onPress={verify} loading={loading} style={styles.cta} />
+      <Entrance delay={380}>
+        <AppButton title={t.confirmCode} onPress={verify} loading={loading} style={styles.cta} />
+      </Entrance>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     paddingHorizontal: 28,
   },
   logoRow: {
@@ -132,6 +163,22 @@ const styles = StyleSheet.create({
   phone: {
     fontFamily: fonts.bold,
     color: colors.dark,
+  },
+  devBanner: {
+    alignSelf: 'center',
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 14,
+  },
+  devBannerText: {
+    fontFamily: fonts.bold,
+    fontSize: 14,
+    color: colors.textGray,
+    letterSpacing: 1,
   },
   countdown: {
     alignSelf: 'center',

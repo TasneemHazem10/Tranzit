@@ -1,7 +1,7 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../theme';
+import { useTheme } from '../theme';
 
 type Props = {
   from: string;
@@ -10,10 +10,11 @@ type Props = {
 
 /** Soft color fading to white — matches the onboarding/auth screens. */
 export default function GradientBackdrop({ from, children }: Props) {
+  const colors = useTheme();
   return (
     <LinearGradient
-      colors={[from, `${from}66`, colors.white]}
-      locations={[0, 0.45, 1]}
+      colors={[from, `${from}88`, colors.card, colors.card]}
+      locations={[0, 0.22, 0.58, 1]}
       style={StyleSheet.absoluteFill}
       pointerEvents="none"
     />
@@ -21,9 +22,9 @@ export default function GradientBackdrop({ from, children }: Props) {
 }
 
 export const GradientColors = {
-  blue: colors.onboardingBlue,
-  yellow: colors.onboardingYellow,
-  purple: colors.onboardingPurple,
-  peach: '#F3C6A5',
-  softGray: '#D9D9D9',
+  blue: '#E3E3DF',
+  yellow: '#D6D6D0',
+  purple: '#C9C9C2',
+  peach: '#E9E7E2',
+  softGray: '#DEDEDA',
 };

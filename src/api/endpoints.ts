@@ -46,6 +46,16 @@ export type Rating = {
   comment: string | null;
 };
 
+export type DriverOffer = {
+  id: number;
+  shipment_id: number;
+  driver_id: number;
+  amount: number;
+  status: 'pending' | 'accepted' | 'declined' | 'canceled' | 'expired';
+  created_at: string;
+  driver?: Driver | null;
+};
+
 export type Shipment = {
   id: number;
   tracking_code: string;
@@ -57,14 +67,27 @@ export type Shipment = {
   dropoff_lat: number | null;
   dropoff_lng: number | null;
   package_type: 'small' | 'medium' | 'large';
+  vehicle_type?: string | null;
+  weight_kg?: number | null;
+  length_cm?: number | null;
+  width_cm?: number | null;
+  height_cm?: number | null;
   payment_method: number;
+  mobile_wallet_provider?: string | null;
+  mobile_wallet_number?: string | null;
+  mobile_wallet_status?: string | null;
   scheduled_at: string | null;
   price: number;
+  distance_km: number | null;
+  estimated_price?: number;
+  payment_status?: 'pending' | 'paid' | 'refunded';
+  paid_at?: string | null;
   notes: string | null;
   delivered_at: string | null;
   created_at: string;
   driver?: Driver | null;
   statuses?: ShipmentStatus[];
+  offers?: DriverOffer[];
   rating?: Rating | null;
   proof_photo_url?: string | null;
   signature_url?: string | null;
@@ -94,7 +117,7 @@ export const authApi = {
     }),
 
   resendOtp: (phone: string, purpose: string) =>
-    request<{ message: string; debug_code?: string | null }>('/api/v1/otp/send', {
+    request<OtpResponse>('/api/v1/otp/send', {
       method: 'POST',
       body: { phone, purpose },
     }),
@@ -108,7 +131,34 @@ export const authApi = {
       body: { phone, code, password, password_confirmation: passwordConfirmation },
     }),
 
+  googleLogin: (idToken: string) =>
+    request<AuthResponse>('/api/v1/google/login', {
+      method: 'POST',
+      body: { id_token: idToken },
+    }),
+
   me: (token: string) => request<{ user: User }>('/api/v1/me', { token }),
+
+  updateProfile: (token: string, body: { name?: string; email?: string | null }) =>
+    request<{ message: string; user: User }>('/api/v1/profile', {
+      method: 'PUT',
+      body,
+      token,
+    }),
+
+  changePassword: (token: string, body: { current_password: string; password: string; password_confirmation: string }) =>
+    request<{ message: string }>('/api/v1/password', {
+      method: 'PUT',
+      body,
+      token,
+    }),
+
+  updatePushToken: (token: string, pushToken: string) =>
+    request<{ message: string }>('/api/v1/push-token', {
+      method: 'POST',
+      body: { push_token: pushToken },
+      token,
+    }),
 
   logout: (token: string) => request<{ message: string }>('/api/v1/logout', { method: 'POST', token }),
 };
@@ -122,9 +172,15 @@ export type CreateShipmentInput = {
   dropoff_address: string;
   dropoff_lat?: number;
   dropoff_lng?: number;
-  package_type: 'small' | 'medium' | 'large';
+  package_type?: 'small' | 'medium' | 'large';
+  vehicle_type?: 'trike' | 'small_car' | 'van' | 'truck' | null;
+  distance_km?: number | null;
+  estimated_duration_min?: number | null;
+  weight_kg?: number | null;
+  length_cm?: number | null;
+  width_cm?: number | null;
+  height_cm?: number | null;
   payment_method: number;
-  scheduled_at?: string | null;
   notes?: string | null;
 };
 
@@ -136,11 +192,68 @@ export const shipmentsApi = {
     request<{ shipment: Shipment }>(`/api/v1/shipments/${code}`, { token }),
 
   create: (token: string, input: CreateShipmentInput) =>
-    request<{ message: string; shipment: Shipment }>('/api/v1/shipments', {
+    request<{ message: string; shipment: Shipment; estimated_price?: number; distance_km?: number | null }>('/api/v1/shipments', {
       method: 'POST',
       body: input,
       token,
     }),
+
+  estimate: (token: string, code: string) =>
+    request<{
+      estimated_price: number;
+      distance_km: number | null;
+      package_base: number;
+      per_km: number;
+      per_km_long: number;
+      long_distance_km: number;
+      rates: Record<string, { base: number; per_km: number; per_km_long: number }>;
+      shipment: Shipment;
+    }>(`/api/v1/shipments/${code}/estimate`, { token }),
+
+  estimateLive: (
+    token: string,
+    input: {
+      pickup_lat: number;
+      pickup_lng: number;
+      dropoff_lat: number;
+      dropoff_lng: number;
+      vehicle_type: 'trike' | 'small_car' | 'van' | 'truck';
+      estimated_duration_min?: number | null;
+    }
+  ) =>
+    request<{
+      distance_km: number;
+      estimated_price: number;
+      package_base: number;
+      per_km: number;
+      per_km_long: number;
+      long_distance_km: number;
+      rates: Record<string, { base: number; per_km: number; per_km_long: number }>;
+    }>('/api/v1/fare/estimate', { method: 'POST', body: input, token }),
+
+  simulateOffer: (token: string, code: string, amount?: number) =>
+    request<{ message: string; offer: DriverOffer; shipment: Shipment }>(
+      `/api/v1/shipments/${code}/offers/simulate`,
+      { method: 'POST', body: amount != null ? { amount } : {}, token }
+    ),
+
+  updateBid: (token: string, code: string, amount: number) =>
+    request<{ message: string; shipment: Shipment }>(
+      `/api/v1/shipments/${code}/bid`,
+      { method: 'POST', body: { amount }, token }
+    ),
+
+  acceptOffer: (token: string, code: string, offerId: number) =>
+    request<{ message: string; shipment: Shipment }>(
+      `/api/v1/shipments/${code}/offers/${offerId}/accept`,
+      { method: 'POST', token }
+    ),
+
+  declineOffer: (token: string, code: string, offerId: number) =>
+    request<{ message: string; shipment: Shipment }>(
+      `/api/v1/shipments/${code}/offers/${offerId}/decline`,
+      { method: 'POST', token }
+    ),
 
   confirmDelivery: (token: string, code: string, form: FormData) =>
     request<{ message: string; shipment: Shipment }>(
@@ -159,72 +272,10 @@ export const shipmentsApi = {
       `/api/v1/shipments/${code}/advance`,
       { method: 'POST', token }
     ),
-};
 
-/* ---------------- Messages ---------------- */
-
-export type Message = {
-  id: number;
-  body: string;
-  is_from_driver: boolean;
-  created_at: string;
-};
-
-export const messagesApi = {
-  list: (token: string, driverId: string) =>
-    request<{ messages: Message[] }>(`/api/v1/messages/${driverId}`, { token }),
-
-  send: (token: string, driverId: string, body: string) =>
-    request<{ message: Message }>(`/api/v1/messages/${driverId}`, {
-      method: 'POST', body: { body }, token
-    }),
-};
-
-/* ---------------- Wallet ---------------- */
-
-export type WalletTransaction = {
-  id: number;
-  type: string;
-  amount: string;
-  description: string | null;
-  created_at: string;
-};
-
-export const walletApi = {
-  get: (token: string) =>
-    request<{ balance: number; transactions: WalletTransaction[] }>('/api/v1/wallet', { token }),
-
-  topup: (token: string, amount: number) =>
-    request<{ message: string; balance: number; transaction: WalletTransaction }>('/api/v1/wallet/topup', {
-      method: 'POST', body: { amount }, token
-    }),
-};
-
-/* ---------------- Notifications ---------------- */
-
-export type AppNotification = {
-  id: number;
-  title: string;
-  body: string;
-  type: string;
-  is_read: boolean;
-  created_at: string;
-};
-
-export const notificationsApi = {
-  list: (token: string) =>
-    request<{ notifications: AppNotification[] }>('/api/v1/notifications', { token }),
-
-  markRead: (token: string, id: number) =>
-    request<{ message: string }>(`/api/v1/notifications/${id}/read`, { method: 'POST', token }),
-
-  markAllRead: (token: string) =>
-    request<{ message: string }>('/api/v1/notifications/read-all', { method: 'POST', token }),
-};
-
-/* ---------------- Driver Registration ---------------- */
-
-export const driverApi = {
-  register: (formData: FormData) =>
-    request<{ message: string; driver: any }>('/api/v1/driver/register', { method: 'POST', formData }),
+  cancel: (token: string, code: string, reason?: string) =>
+    request<{ message: string; shipment: Shipment }>(
+      `/api/v1/shipments/${code}/cancel`,
+      { method: 'POST', body: reason ? { reason } : {}, token }
+    ),
 };

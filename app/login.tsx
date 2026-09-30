@@ -1,115 +1,170 @@
 import React from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useForm } from 'react-hook-form';
 import Logo from '../src/components/Logo';
+import AuthBackdrop from '../src/components/AuthBackdrop';
 import AppButton from '../src/components/AppButton';
 import FormField from '../src/components/FormField';
 import DividerRow from '../src/components/DividerRow';
 import GoogleButton from '../src/components/GoogleButton';
-import { authApi, type OtpResponse } from '../src/api/endpoints';
-import { colors, fonts } from '../src/theme';
+import { Entrance } from '../src/components/Motion';
+import { authApi } from '../src/api/endpoints';
+import { useAuth } from '../src/store/auth';
+import { useGoogleAuth } from '../src/hooks/useGoogleAuth';
+import { useLanguage } from '../src/store/language';
+import { fonts, useTheme, type ThemeColors } from '../src/theme';
 
-type FormValues = { phone: string; password: string };
+type FormValues = {
+  phone: string;
+  password: string;
+};
 
 export default function Login() {
   const router = useRouter();
+  const colors = useTheme();
+  const styles = makeStyles(colors);
+  const { t, isRTL } = useLanguage();
+  const { signIn } = useAuth();
+  const { signInWithGoogle, loading: googleLoading } = useGoogleAuth();
+  const [loading, setLoading] = React.useState(false);
+
   const { control, handleSubmit } = useForm<FormValues>({
     defaultValues: { phone: '', password: '' },
   });
-  const [loading, setLoading] = React.useState(false);
 
   const onSubmit = handleSubmit(async ({ phone, password }) => {
     setLoading(true);
     try {
       const res = await authApi.login(phone.trim(), password);
-      const debugMsg = res.debug_code ? `\n\nكود التحقق: ${res.debug_code}` : '';
-      Alert.alert('تم', `تم إرسال كود التحقق إلى رقمك.${debugMsg}`);
-      router.push({ pathname: '/otp', params: { phone: phone.trim(), purpose: 'login' } });
+      Alert.alert(t.alertSuccess, t.alertOtpSent);
+      router.push({
+        pathname: '/otp',
+        params: {
+          phone: phone.trim(),
+          purpose: 'login',
+          ...(res.debug_code ? { code: res.debug_code } : {}),
+        },
+      });
     } catch (e: any) {
       const fields = e?.fieldErrors
         ? Object.values(e.fieldErrors).flat().join('\n')
         : null;
-      Alert.alert('تنبيه', fields ?? e?.message ?? 'حدث خطأ، حاول مرة أخرى.');
+      Alert.alert(t.alertWarning, fields ?? e?.message ?? t.alertErrorGeneric);
     } finally {
       setLoading(false);
     }
   });
 
-  const onGoogle = () => {
-    Alert.alert(
-      'تسجيل جوجل',
-      'لتشغيل تسجيل الدخول بجوجل تحتاج:\n1) إنشاء OAuth Client ID من Google Cloud Console\n2) إضافته في backend/.env باسم GOOGLE_CLIENT_ID\n3) بناء نسخة تطوير (dev build) مع مكتبة google-signin'
-    );
+  const onGoogle = async () => {
+    try {
+      const idToken = await signInWithGoogle();
+      if (!idToken) return;
+
+      const res = await authApi.googleLogin(idToken);
+      await signIn(res.token, res.user);
+      Alert.alert(t.alertSuccess, res.message);
+      router.replace('/(main)');
+    } catch (e: any) {
+      Alert.alert(t.alertWarning, e?.message ?? t.alertGoogleLoginFail);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safe}>
-      <LinearGradient
-        colors={['#DDE7EE', '#FFFFFF00']}
-        locations={[0, 0.35]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-      <View style={styles.logoRow}>
-        <Logo width={120} variant="dark" />
-      </View>
+      <AuthBackdrop />
 
-      <Text style={styles.title}>تسجيل دخول</Text>
-      <Text style={styles.subtitle}>سجل دخولك الآن وابدأ رحلتك</Text>
+      <View style={styles.scroll}>
+        <Entrance delay={40}>
+          <View style={styles.logoRow}>
+            <View style={styles.logoBadge}>
+              <Logo width={110} variant="white" />
+            </View>
+          </View>
+        </Entrance>
 
-      <View style={styles.form}>
-        <FormField
-          control={control}
-          name="phone"
-          placeholder="رقم الهاتف"
-          icon="call-outline"
-          keyboardType="phone-pad"
-          rules={{
-            required: 'أدخل رقم الهاتف',
-            pattern: { value: /^[0-9+\s-]{8,15}$/, message: 'رقم هاتف غير صالح' },
-          }}
-        />
-        <FormField
-          control={control}
-          name="password"
-          placeholder="كلمة المرور"
-          icon="lock-closed-outline"
-          secure
-          rules={{ required: 'أدخل كلمة المرور' }}
-        />
+        <Entrance delay={120}>
+          <Text style={[styles.title, { textAlign: isRTL ? 'right' : 'left' }]}>{t.loginTitle}</Text>
+          <Text style={[styles.subtitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t.loginSubtitle}</Text>
+        </Entrance>
 
-        <Link href="/forgot-password" asChild>
-          <Text style={styles.forgot}>نسيت كلمة المرور؟</Text>
-        </Link>
+        <Entrance delay={190} style={styles.form}>
+          <FormField
+            control={control}
+            name="phone"
+            label={t.phonePlaceholder}
+            placeholder={t.phonePlaceholder}
+            icon="call-outline"
+            keyboardType="phone-pad"
+            rules={{
+              required: t.alertPhoneRequired,
+              pattern: { value: /^[0-9+\s-]{8,15}$/, message: t.alertPhoneInvalid },
+            }}
+          />
+          <FormField
+            control={control}
+            name="password"
+            label={t.passwordPlaceholder}
+            placeholder={t.passwordPlaceholder}
+            icon="lock-closed-outline"
+            secure
+            rules={{
+              required: t.alertPasswordRequired,
+              minLength: { value: 6, message: t.alertPasswordMin },
+            }}
+          />
 
-        <AppButton title="تسجيل دخول" onPress={onSubmit} loading={loading} />
-        <DividerRow />
-        <GoogleButton onPress={onGoogle} />
+          <Pressable onPress={() => router.push('/forgot-password')}>
+            <Text
+              style={StyleSheet.flatten([styles.forgot, { textAlign: isRTL ? 'right' : 'left' }])}>
+              {t.forgotPassword}
+            </Text>
+          </Pressable>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>ليس لديك حساب؟ </Text>
-          <Link href="/signup" asChild>
-            <Text style={styles.footerLink}>إنشاء حساب</Text>
-          </Link>
-        </View>
+          <AppButton title={t.loginBtn} onPress={onSubmit} loading={loading} />
+
+          <View style={[styles.footer, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            <Text style={styles.footerText}>{t.noAccount}</Text>
+            <Pressable onPress={() => router.push('/signup')}>
+              <Text style={styles.footerLink}>{t.createAccount}</Text>
+            </Pressable>
+          </View>
+
+          <DividerRow />
+          <GoogleButton disabled={googleLoading} onPress={onGoogle} />
+        </Entrance>
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     paddingHorizontal: 28,
+  },
+  scroll: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingBottom: 24,
   },
   logoRow: {
     alignItems: 'center',
-    marginTop: 26,
-    marginBottom: 30,
+    marginBottom: 26,
+  },
+  logoBadge: {
+    backgroundColor: colors.brand,
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    shadowColor: colors.brandDeep,
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 6,
   },
   title: {
     fontFamily: fonts.extraBold,
@@ -123,23 +178,22 @@ const styles = StyleSheet.create({
     color: colors.textGray,
     textAlign: 'center',
     marginTop: 4,
-    marginBottom: 26,
+    marginBottom: 22,
   },
   form: {
     width: '100%',
     gap: 8,
   },
   forgot: {
-    alignSelf: 'flex-start',
-    color: colors.textGray,
     fontFamily: fonts.semiBold,
-    fontSize: 13,
-    marginVertical: 6,
+    fontSize: 13.5,
+    color: colors.textGray,
+    textDecorationLine: 'underline',
+    marginVertical: 2,
   },
   footer: {
-    flexDirection: 'row-reverse',
     justifyContent: 'center',
-    marginTop: 22,
+    marginTop: 12,
   },
   footerText: {
     fontFamily: fonts.medium,

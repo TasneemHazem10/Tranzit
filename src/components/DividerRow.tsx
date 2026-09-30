@@ -1,18 +1,26 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts } from '../theme';
+import { Entrance } from './Motion';
+import { useLanguage } from '../store/language';
+import { fonts, useTheme, type ThemeColors } from '../theme';
 
 export default function DividerRow() {
+  const colors = useTheme();
+  const styles = makeStyles(colors);
+  const { t } = useLanguage();
   return (
-    <View style={styles.row}>
-      <View style={styles.line} />
-      <Text style={styles.text}>أو</Text>
-      <View style={styles.line} />
-    </View>
+    <Entrance direction="fade" distance={0} delay={180}>
+      <View style={styles.row}>
+        <View style={styles.line} />
+        <Text style={styles.text}>{t.orDivider}</Text>
+        <View style={styles.line} />
+      </View>
+    </Entrance>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -11,6 +11,14 @@ import * as Device from 'expo-device';
  */
 function resolveBaseUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL;
+
+  if (Platform.OS === 'web') {
+    const hostname = globalThis.location?.hostname;
+    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+    if (fromEnv && !isLocalHost) return fromEnv.replace(/\/$/, '');
+    return `http://${hostname || 'localhost'}:8000`;
+  }
+
   if (fromEnv) return fromEnv.replace(/\/$/, '');
 
   if (Platform.OS === 'android' && !Device.isDevice) {

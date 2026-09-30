@@ -1,31 +1,23 @@
 {
   "expo": {
-    "name": "Tranzit",
-    "slug": "tranzit",
+    "name": "Tranzet",
+    "slug": "tranzet",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "tranzit",
+    "icon": "./assets/images/splash-logo.png",
+    "scheme": "tranzet",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.tranzit.shipping",
-      "config": {
-        "googleMapsApiKey": "AIzaSyDrzPTEiAG3SzfIOsmfs0YAyFjJLiByqr8"
-      }
+      "bundleIdentifier": "com.tranzet.shipping"
     },
     "android": {
-      "package": "com.tranzit.shipping",
+      "package": "com.tranzet.shipping",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#1E1E1C"
+        "foregroundImage": "./assets/images/splash-logo.png",
+        "backgroundColor": "#FF3B1F"
       },
-      "predictiveBackGestureEnabled": false,
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyDFJVPI73Mn5PiX03CZL8F1475yC0dVeBg"
-        }
-      }
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
@@ -36,13 +28,12 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1E1E1C",
+          "backgroundColor": "#FF3B1F",
           "image": "./assets/images/splash-logo.png",
           "imageWidth": 180
         }
       ],
       "expo-secure-store",
-      "@react-native-community/datetimepicker",
       [
         "expo-location",
         {
@@ -55,7 +46,16 @@
           "photosPermission": "يحتاج ترانزيت الوصول لصورك لإرفاق إثبات التسليم.",
           "cameraPermission": "يحتاج ترانزيت استخدام الكاميرا لتصوير إثبات التسليم."
         }
-      ]
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/splash-logo.png",
+          "color": "#FF3B1F"
+        }
+      ],
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

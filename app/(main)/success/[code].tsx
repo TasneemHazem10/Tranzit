@@ -1,22 +1,27 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AppButton from '../../../src/components/AppButton';
 import Stars from '../../../src/components/Stars';
+import { Entrance, Pulse, Skeleton } from '../../../src/components/Motion';
 import {
   shipmentsApi,
   type Shipment,
 } from '../../../src/api/endpoints';
 import { useAuth } from '../../../src/store/auth';
-import { colors, fonts, radius } from '../../../src/theme';
+import { useLanguage } from '../../../src/store/language';
+import { fonts, radius, useTheme, type ThemeColors } from '../../../src/theme';
 
 export default function Success() {
   const router = useRouter();
+  const colors = useTheme();
+  const styles = makeStyles(colors);
   const { code } = useLocalSearchParams<{ code: string }>();
   const { token } = useAuth();
+  const { t, isRTL } = useLanguage();
 
   const [shipment, setShipment] = useState<Shipment | null>(null);
   const [stars, setStars] = useState(shipment?.rating?.stars ?? 0);
@@ -36,7 +41,8 @@ export default function Success() {
   }, [token, code]);
 
   useEffect(() => {
-    void load();
+    const t = setTimeout(() => void load(), 0);
+    return () => clearTimeout(t);
   }, [load]);
 
   const submitRating = async () => {
@@ -55,72 +61,89 @@ export default function Success() {
   if (!shipment) {
     return (
       <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color={colors.dark} />
+        <Skeleton height={92} radius={46} />
+        <Skeleton height={200} radius={radius.lg} />
       </View>
     );
   }
 
   const time = shipment.delivered_at
-    ? new Date(shipment.delivered_at).toLocaleTimeString('ar-EG', {
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+    ? new Date(shipment.delivered_at).toLocaleTimeString(
+        isRTL ? 'ar-EG' : 'en-US',
+        {
+          hour: '2-digit',
+          minute: '2-digit',
+        }
+      )
     : '--:--';
 
   return (
-    <LinearGradient colors={['#E9F4EA', '#FFFFFF']} locations={[0, 0.5]} style={{ flex: 1 }}>
+    <LinearGradient colors={[colors.brandSoft, colors.background]} locations={[0, 0.5]} style={{ flex: 1 }}>
       <SafeAreaView style={styles.safe}>
         {/* Checkmark */}
         <View style={styles.checkWrap}>
-          <View style={styles.checkOuter}>
-            <View style={styles.checkInner}>
-              <Ionicons name="checkmark" size={54} color="#fff" />
+          <Pulse color={colors.green} size={108} duration={2000} />
+          <Entrance scaleFrom={0.3} distance={0} delay={80}>
+            <View style={styles.checkOuter}>
+              <View style={styles.checkInner}>
+                <Ionicons name="checkmark" size={54} color="#fff" />
+              </View>
             </View>
-          </View>
-          <Text style={styles.title}>تم التسليم بنجاح 🎉</Text>
+          </Entrance>
+          <Entrance direction="up" delay={240}>
+            <Text style={styles.title}>{t.successTitle}</Text>
+          </Entrance>
         </View>
 
         {/* Details card */}
-        <View style={styles.card}>
-          <DetailRow icon="pricetag" label="رقم الطلب" value={`#${shipment.tracking_code}`} />
-          <Divider />
-          <DetailRow icon="time-outline" label="الوقت" value={time} />
-          <Divider />
-          <DetailRow
-            icon="cash-outline"
-            label="الإجمالي"
-            value={`${shipment.price} جنيه`}
-          />
-          <Divider />
-          <DetailRow
-            icon="person-outline"
-            label="السائق"
-            value={shipment.driver?.name ?? '—'}
-          />
-        </View>
+        <Entrance direction="up" delay={320}>
+          <View style={styles.card}>
+            <DetailRow icon="pricetag" label={t.orderId} value={`#${shipment.tracking_code}`} isRTL={isRTL} delay={380} />
+            <Divider />
+            <DetailRow icon="time-outline" label={t.successTime} value={time} isRTL={isRTL} delay={420} />
+            <Divider />
+            <DetailRow
+              icon="cash-outline"
+              label={t.successTotal}
+              value={`${shipment.price} ${t.egp}`}
+              isRTL={isRTL}
+              delay={460}
+            />
+            <Divider />
+            <DetailRow
+              icon="person-outline"
+              label={t.successDriver}
+              value={shipment.driver?.name ?? '—'}
+              isRTL={isRTL}
+              delay={500}
+            />
+          </View>
+        </Entrance>
 
         {/* Rating */}
-        <Text style={styles.rateTitle}>تقييم السائق</Text>
-        <Text style={styles.rateSub}>كيف كانت تجربتك مع {shipment.driver?.name ?? 'السائق'}؟</Text>
-        <View style={{ marginTop: 12 }}>
-          <Stars rating={stars} onChange={setStars} size={40} />
-        </View>
-        {rated && (
-          <Text style={styles.thanks}>شكراً لتقييمك! ⭐</Text>
-        )}
+        <Entrance direction="up" delay={560}>
+          <Text style={styles.rateTitle}>{t.rateTitle}</Text>
+          <Text style={styles.rateSub}>{t.rateSub} {shipment.driver?.name ?? t.successDriver}</Text>
+          <View style={{ marginTop: 12 }}>
+            <Stars rating={stars} onChange={setStars} size={40} />
+          </View>
+          {rated && (
+            <Text style={styles.thanks}>{t.rateThanks}</Text>
+          )}
+        </Entrance>
 
         <View style={{ flex: 1 }} />
 
         {!rated && stars > 0 && (
           <AppButton
-            title="تقييم السائق"
+            title={t.rateBtn}
             onPress={submitRating}
             loading={submitting}
             variant="outline"
             style={{ marginBottom: 10 }}
           />
         )}
-        <AppButton title="العودة الرئيسية" onPress={() => router.dismissAll()} style={{ marginBottom: 24 }} />
+        <AppButton title={t.homeBtn} onPress={() => router.dismissAll()} style={{ marginBottom: 24 }} />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -130,32 +153,43 @@ function DetailRow({
   icon,
   label,
   value,
+  isRTL,
+  delay,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
+  isRTL: boolean;
+  delay: number;
 }) {
+  const colors = useTheme();
+  const styles = makeStyles(colors);
   return (
-    <View style={styles.row}>
-      <View style={styles.rowRight}>
-        <Ionicons name={icon} size={17} color={colors.textGray} />
-        <Text style={[styles.label, { marginLeft: 8 }]}>{label}</Text>
+    <Entrance direction="up" distance={10} delay={delay}>
+      <View style={styles.row}>
+        <View style={styles.rowRight}>
+          <Ionicons name={icon} size={17} color={colors.textGray} />
+          <Text style={[styles.label, { marginStart: 8 }]}>{label}</Text>
+        </View>
+        <Text style={styles.value}>{value}</Text>
       </View>
-      <Text style={styles.value}>{value}</Text>
-    </View>
+    </Entrance>
   );
 }
 
 function Divider() {
+  const colors = useTheme();
+  const styles = makeStyles(colors);
   return <View style={styles.divider} />;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: {
     flex: 1,
     paddingHorizontal: 24,
   },
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingWrap: { flex: 1, justifyContent: 'center', gap: 20, paddingHorizontal: 24 },
   checkWrap: {
     alignItems: 'center',
     marginTop: 34,
@@ -183,7 +217,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     borderRadius: radius.lg,
     padding: 18,
     marginTop: 26,

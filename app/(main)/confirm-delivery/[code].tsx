@@ -3,8 +3,6 @@ import {
   Alert,
   Image,
   Modal,
-  Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -15,14 +13,20 @@ import Signature from 'react-native-signature-canvas';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AppButton from '../../../src/components/AppButton';
+import IconButton from '../../../src/components/IconButton';
+import { Entrance, PressableScale } from '../../../src/components/Motion';
 import { shipmentsApi } from '../../../src/api/endpoints';
 import { useAuth } from '../../../src/store/auth';
-import { colors, fonts, radius } from '../../../src/theme';
+import { useLanguage } from '../../../src/store/language';
+import { fonts, radius, useTheme, type ThemeColors } from '../../../src/theme';
 
 export default function ConfirmDelivery() {
   const router = useRouter();
+  const colors = useTheme();
+  const styles = makeStyles(colors);
   const { code } = useLocalSearchParams<{ code: string }>();
   const { token } = useAuth();
+  const { t, isRTL } = useLanguage();
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [signatureData, setSignatureData] = useState<string | null>(null);
@@ -45,7 +49,6 @@ export default function ConfirmDelivery() {
     setLoading(true);
     try {
       const form = new FormData();
-      // RN FormData file shape
       if (photoUri) {
         form.append('proof_photo', {
           uri: photoUri,
@@ -63,7 +66,7 @@ export default function ConfirmDelivery() {
       await shipmentsApi.confirmDelivery(token!, code!, form);
       router.replace(`/success/${code}`);
     } catch (e: any) {
-      Alert.alert('تنبيه', e?.message ?? 'تعذر تأكيد التسليم.');
+      Alert.alert(t.alertWarning, e?.message ?? t.alertErrorGeneric);
     } finally {
       setLoading(false);
     }
@@ -71,64 +74,68 @@ export default function ConfirmDelivery() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.headerRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-forward" size={22} color={colors.dark} />
-        </Pressable>
-        <Text style={styles.title}>تأكيد التسليم</Text>
-        <View style={{ width: 38 }} />
-      </View>
-      <Text style={styles.orderNote}>رقم الطلب #{code}</Text>
+      <Entrance direction="down" distance={12}>
+        <View style={styles.headerRow}>
+          <IconButton
+            icon={isRTL ? 'chevron-back' : 'chevron-forward'}
+            variant="light"
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(main)'))}
+          />
+          <Text style={styles.title}>{t.confirmDeliveryTitle}</Text>
+          <View style={{ width: 38 }} />
+        </View>
+      </Entrance>
+      <Text style={styles.orderNote}>{t.orderId}#{code}</Text>
 
       {/* Proof of delivery */}
-      <Text style={styles.section}>إثبات التسليم</Text>
-      <Pressable style={styles.dropBox} onPress={pickPhoto}>
-        {photoUri ? (
-          <Image source={{ uri: photoUri }} style={[StyleSheet.absoluteFill, styles.preview]} />
-        ) : (
-          <>
-            <Ionicons name="camera-outline" size={34} color={colors.textLight} />
-            <Text style={styles.dropText}>اضغط لتصوير الشحنة المُسلَّمة</Text>
-          </>
-        )}
-        {photoUri && (
-          <View style={styles.checkBadge}>
-            <Ionicons name="checkmark" size={16} color="#fff" />
-          </View>
-        )}
-      </Pressable>
-
-      {/* Signature */}
-      <Text style={styles.section}>الحصول على توقيع</Text>
-      <Pressable style={styles.dropBox} onPress={() => setSigModal(true)}>
-        {signatureData ? (
-          <>
-            <Image source={{ uri: signatureData }} style={styles.sigPreview} resizeMode="contain" />
-            <View style={styles.checkBadge}>
+      <Text style={styles.section}>{t.proofTitle}</Text>
+      <Entrance direction="up" delay={120}>
+        <PressableScale onPress={pickPhoto} contentStyle={styles.dropBox} pressedStyle={styles.dropBoxPressed}>
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} style={[StyleSheet.absoluteFill, styles.preview]} />
+          ) : (
+            <>
+              <Ionicons name="camera-outline" size={34} color={colors.textLight} />
+              <Text style={styles.dropText}>{t.proofCapture}</Text>
+            </>
+          )}
+          {photoUri && (
+            <View style={[styles.checkBadge, isRTL ? { right: 10 } : { left: 10 }]}>
               <Ionicons name="checkmark" size={16} color="#fff" />
             </View>
-          </>
-        ) : (
-          <>
-            <Ionicons name="create-outline" size={34} color={colors.textLight} />
-            <Text style={styles.dropText}>اضغط للحصول على توقيع المستلم</Text>
-          </>
-        )}
-      </Pressable>
+          )}
+        </PressableScale>
+      </Entrance>
+
+      {/* Signature */}
+      <Text style={styles.section}>{t.signatureTitle}</Text>
+      <Entrance direction="up" delay={220}>
+        <PressableScale onPress={() => setSigModal(true)} contentStyle={styles.dropBox} pressedStyle={styles.dropBoxPressed}>
+          {signatureData ? (
+            <>
+              <Image source={{ uri: signatureData }} style={styles.sigPreview} resizeMode="contain" />
+              <View style={[styles.checkBadge, isRTL ? { right: 10 } : { left: 10 }]}>
+                <Ionicons name="checkmark" size={16} color="#fff" />
+              </View>
+            </>
+          ) : (
+            <>
+              <Ionicons name="create-outline" size={34} color={colors.textLight} />
+              <Text style={styles.dropText}>{t.signatureTap}</Text>
+            </>
+          )}
+        </PressableScale>
+      </Entrance>
 
       <View style={{ flex: 1 }} />
 
-      <AppButton title="تأكيد التسليم" onPress={submit} loading={loading} style={{ marginBottom: 20 }} />
+      <AppButton title={t.submitDelivery} onPress={submit} loading={loading} style={{ marginBottom: 20 }} />
 
       <Modal visible={sigModal} animationType="slide">
         <SafeAreaView style={styles.sigModal}>
           <View style={styles.headerRow}>
-            <Pressable
-              onPress={() => setSigModal(false)}
-              style={styles.backBtn}>
-              <Ionicons name="close" size={22} color={colors.dark} />
-            </Pressable>
-            <Text style={styles.title}>توقيع المستلم</Text>
+            <IconButton icon="close" variant="light" onPress={() => setSigModal(false)} />
+            <Text style={styles.title}>{t.signatureModalTitle}</Text>
             <View style={{ width: 38 }} />
           </View>
           <View style={styles.sigPadWrap}>
@@ -137,10 +144,10 @@ export default function ConfirmDelivery() {
                 setSignatureData(data);
                 setSigModal(false);
               }}
-              onEmpty={() => Alert.alert('تنبيه', 'لم تقم بالتوقيع بعد.')}
-              descriptionText="وقّع داخل الإطار"
-              clearText="مسح"
-              confirmText="تأكيد"
+              onEmpty={() => Alert.alert(t.alertWarning, t.alertSignatureEmpty)}
+              descriptionText={t.signaturePadText}
+              clearText={t.signatureClear}
+              confirmText={t.signatureConfirm}
               penColor="#1E1E1C"
               backgroundColor="#F5F5F4"
               autoClear
@@ -160,10 +167,11 @@ const padStyle = `
   border: none;
 }`;
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     paddingHorizontal: 24,
   },
   headerRow: {
@@ -171,14 +179,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: 8,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   title: {
     fontFamily: fonts.extraBold,
@@ -217,13 +217,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textLight,
   },
+  dropBoxPressed: {
+    borderColor: colors.brand,
+    backgroundColor: colors.brand + '0A',
+  },
   preview: {
     borderRadius: radius.lg - 2,
   },
   checkBadge: {
     position: 'absolute',
     top: 10,
-    left: 10,
     width: 26,
     height: 26,
     borderRadius: 13,
@@ -237,7 +240,7 @@ const styles = StyleSheet.create({
   },
   sigModal: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     paddingHorizontal: 20,
   },
   sigPadWrap: {

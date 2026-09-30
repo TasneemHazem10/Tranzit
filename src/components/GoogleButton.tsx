@@ -1,35 +1,40 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, radius } from '../theme';
+import { StyleSheet, Text, View } from 'react-native';
+import { PressableScale } from './Motion';
+import { useLanguage } from '../store/language';
+import { fonts, radius, useTheme, type ThemeColors } from '../theme';
 
 type Props = { onPress?: () => void; disabled?: boolean };
 
-/**
- * Google sign-in button.
- *
- * Real Google Sign-In requires a development build with
- * @react-native-google-signin/google-signin + GOOGLE_CLIENT_ID configured on
- * the backend. Until then this shows an explanatory alert when pressed.
- */
 export default function GoogleButton({ onPress, disabled }: Props) {
+  const colors = useTheme();
+  const styles = makeStyles(colors);
+  const { t, isRTL } = useLanguage();
+
   return (
-    <Pressable
+    <PressableScale
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, pressed && { opacity: 0.85 }]}>
+      contentStyle={[
+        { flexDirection: isRTL ? 'row-reverse' : 'row' },
+        styles.button,
+      ]}
+      pressedStyle={{ opacity: 0.85 }}
+      scaleTo={0.97}>
       <View style={styles.badge}>
         <Text style={styles.g}>G</Text>
       </View>
-      <Text style={styles.text}>التسجيل بواسطة جوجل</Text>
-    </Pressable>
+      <Text style={styles.text}>{t.googleSignIn}</Text>
+    </PressableScale>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   button: {
     height: 56,
     borderRadius: radius.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     borderWidth: 1.5,
     borderColor: colors.border,
     flexDirection: 'row',
@@ -42,7 +47,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     borderWidth: 1.2,
     borderColor: '#4285F4',
     alignItems: 'center',

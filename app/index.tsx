@@ -1,14 +1,13 @@
 import React from 'react';
-import { View } from 'react-native';
 import { Redirect } from 'expo-router';
+import AnimatedSplash from '../src/components/AnimatedSplash';
 import { useAuth } from '../src/store/auth';
-import { colors } from '../src/theme';
 
 export default function Gate() {
   const { token, seenOnboarding, loading } = useAuth();
 
   if (loading) {
-    return <View style={{ flex: 1, backgroundColor: colors.dark }} />;
+    return <AnimatedSplash />;
   }
 
   if (!token && !seenOnboarding) {

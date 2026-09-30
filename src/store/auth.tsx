@@ -6,11 +6,11 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { authApi, type User } from '../api/endpoints';
+import { getItem, removeItem, setItem } from './storage';
 
-const TOKEN_KEY = 'tranzit_token';
-const ONBOARDING_KEY = 'tranzit_seen_onboarding';
+const TOKEN_KEY = 'tranzet_token';
+const ONBOARDING_KEY = 'tranzet_seen_onboarding';
 
 type AuthContextValue = {
   user: User | null;
@@ -19,6 +19,7 @@ type AuthContextValue = {
   seenOnboarding: boolean;
   signIn: (token: string, user: User) => Promise<void>;
   signOut: () => Promise<void>;
+  updateUser: (user: User) => void;
   markOnboardingSeen: () => Promise<void>;
 };
 
@@ -29,6 +30,7 @@ const AuthContext = createContext<AuthContextValue>({
   seenOnboarding: false,
   signIn: async () => {},
   signOut: async () => {},
+  updateUser: () => {},
   markOnboardingSeen: async () => {},
 });
 
@@ -42,19 +44,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         const [storedToken, storedSeen] = await Promise.all([
-          SecureStore.getItemAsync(TOKEN_KEY),
-          SecureStore.getItemAsync(ONBOARDING_KEY),
+          getItem(TOKEN_KEY),
+          getItem(ONBOARDING_KEY),
         ]);
 
         if (storedSeen === '1') setSeenOnboarding(true);
 
         if (storedToken) {
-          const { user: me } = await authApi.me(storedToken);
-          setToken(storedToken);
-          setUser(me);
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 3000);
+            const { user: me } = await authApi.me(storedToken);
+            clearTimeout(timeout);
+            setToken(storedToken);
+            setUser(me);
+          } catch {
+            await removeItem(TOKEN_KEY).catch(() => {});
+          }
         }
       } catch {
-        await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+        await removeItem(TOKEN_KEY).catch(() => {});
       } finally {
         setLoading(false);
       }
@@ -62,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (newToken: string, newUser: User) => {
-    await SecureStore.setItemAsync(TOKEN_KEY, newToken);
+    await setItem(TOKEN_KEY, newToken);
     setToken(newToken);
     setUser(newUser);
   }, []);
@@ -71,19 +80,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (token) {
       await authApi.logout(token).catch(() => {});
     }
-    await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+    await removeItem(TOKEN_KEY).catch(() => {});
     setToken(null);
     setUser(null);
   }, [token]);
 
+  const updateUser = useCallback((newUser: User) => {
+    setUser(newUser);
+  }, []);
+
   const markOnboardingSeen = useCallback(async () => {
-    await SecureStore.setItemAsync(ONBOARDING_KEY, '1');
+    await setItem(ONBOARDING_KEY, '1');
     setSeenOnboarding(true);
   }, []);
 
   const value = useMemo(
-    () => ({ user, token, loading, seenOnboarding, signIn, signOut, markOnboardingSeen }),
-    [user, token, loading, seenOnboarding, signIn, signOut, markOnboardingSeen]
+    () => ({ user, token, loading, seenOnboarding, signIn, signOut, updateUser, markOnboardingSeen }),
+    [user, token, loading, seenOnboarding, signIn, signOut, updateUser, markOnboardingSeen]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
