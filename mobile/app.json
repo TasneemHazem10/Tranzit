@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "Tranzet",
+    "slug": "tranzet",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/splash-logo.png",
+    "scheme": "tranzet",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tranzet.shipping"
+    },
+    "android": {
+      "package": "com.tranzet.shipping",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/splash-logo.png",
+        "backgroundColor": "#FF3B1F"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FF3B1F",
+          "image": "./assets/images/splash-logo.png",
+          "imageWidth": 180
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "يحتاج ترانزيت الوصول لموقعك لتحديد نقاط الشحن والتتبع."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "يحتاج ترانزيت الوصول لصورك لإرفاق إثبات التسليم.",
+          "cameraPermission": "يحتاج ترانزيت استخدام الكاميرا لتصوير إثبات التسليم."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/splash-logo.png",
+          "color": "#FF3B1F"
+        }
+      ],
+      "expo-image",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

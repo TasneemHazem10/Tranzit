@@ -1,0 +1,54 @@
+# Root of the Tranzit monorepo: backend/ (Laravel API) + mobile/ (Expo app).
+# Each app folder also keeps its own .gitignore; this file covers repo-root artifacts.
+
+# dependencies (root workspace)
+node_modules/
+
+# Expo
+.expo/
+dist/
+dist-check*/
+web-build/
+expo-env.d.ts
+*.tsbuildinfo
+
+# secrets
+.env
+.env*.local
+google-service-account.json
+
+# Laravel (backend)
+/backend/vendor/
+/backend/node_modules/
+/backend/.env
+/backend/.env.backup
+/backend/.env.production
+/backend/public/build/
+/backend/public/hot/
+/backend/public/storage/
+/backend/storage/*.key
+/backend/storage/pail/
+/backend/.phpunit.cache/
+/backend/.phpunit.result.cache
+/backend/.phpactor.json
+/backend/auth.json
+/backend/Homestead.json
+/backend/Homestead.yaml
+
+# tooling / editors
+.idea/
+.vscode/
+.zed/
+.nova/
+.fleet
+*.log
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# OS
+.DS_Store
+Thumbs.db
